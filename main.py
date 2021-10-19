@@ -6,13 +6,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from random import randint
-import json
 import requests
 
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 caps = DesiredCapabilities.CHROME
+
+# TODO: Get response from network in browser
 caps['goog:loggingPrefs'] = {'performance': 'ALL'}
+
 
 def get_used_percentage_cpu():
     URL = 'https://wax.greymass.com/v1/chain/get_account'
@@ -25,36 +27,29 @@ def get_used_percentage_cpu():
 
     return percentage_used
 
-def processLog(log):
-    log = json.loads(log["message"])["message"]
-    if ("Network.responseReceived" in log["method"] and "params" in log.keys()):
-        body = driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': log["params"]["requestId"]})
-        print(json.dumps(body, indent=4, sort_keys=True))
-        return log["params"]
 
 if __name__ == '__main__':
-    print(get_used_percentage_cpu())
     options = Options()
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_argument(f"user-data-dir={pathlib.Path().resolve()}/chrome_profile")
     options.add_argument('--ignore-certificate-errors-spki-list')
     options.add_argument('--ignore-ssl-errors')
     driver = webdriver.Chrome(options=options, desired_capabilities=caps)
-    # driver = webdriver.Chrome()
 
     driver.get('https://play.alienworlds.io/')
-    # driver.get('https://all-access.wax.io/')
     start_now_button = WebDriverWait(driver, 100).until(EC.presence_of_element_located((By.XPATH, "//*[text()='Start Now']")))
-    # element = driver.find_elements_by_xpath("//*[contains(text(), 'Start Now')]")[0].click()
     start_now_button.click()
     WebDriverWait(driver, 100).until(EC.presence_of_element_located((By.XPATH, "//*[text()='Trilium Balance']")))
+
     while True:
         used_cpu_percentage = get_used_percentage_cpu()
 
-        while used_cpu_percentage >= 80:
+        while used_cpu_percentage >= 90:
             print(f'USED CPU PERCENTAGE: {used_cpu_percentage}')
             print(f'WAITING FOR 600s...')
-            sleep(600)
+            for i in range(600, 0, -1):
+                print(f"{i}s LEFT...", end='\r')
+                sleep(1)
             used_cpu_percentage = get_used_percentage_cpu()
 
         mine_button = WebDriverWait(driver, 600).until(EC.presence_of_element_located((By.XPATH, "//*[text()='Mine']")))
@@ -76,23 +71,5 @@ if __name__ == '__main__':
             driver.switch_to.window(driver.window_handles[0])
             # Verificar se deu boa ou ruim
             # https://aw-guard.yeomen.ai/v1/chain/push_transaction HTTP 202
-
-            # for request in driver.requests:
-            #     if request.response:
-            #         print(
-            #             request.url,
-            #             request.response.status_code,
-            #             request.response.headers['Content-Type']
-            #         )
-
-
-            # logs = driver.get_log('performance')
-            # responses = [processLog(log) for log in logs]
-            #
-            # with open('data.json', 'w', encoding='utf-8') as f:
-            #     json.dump(responses, f, ensure_ascii=False, indent=4)
-
-            # Se deu ruim, aguardar 10 minutos pra rodar novamente
-
 
     driver.close()
