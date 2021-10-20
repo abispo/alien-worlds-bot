@@ -35,21 +35,25 @@ class AlienWorldsBot:
 
     def _is_waiting_timeout(self):
         date_now = datetime.utcfromtimestamp(time())
-        print((date_now - self._last_mine_attempt_timestamp).total_seconds())
+        print(f"WAITING TIMEOUT: {(date_now - self._last_mine_attempt_timestamp).total_seconds() > settings.WAITING_TIMEOUT}")
+        print(f"DATE NOW: {date_now}")
+        print(f"LAST_MINE_ATTEMPT_TIMESTAMP: {self._last_mine_attempt_timestamp}")
         return (date_now - self._last_mine_attempt_timestamp).total_seconds() > settings.WAITING_TIMEOUT
 
     def _access_website_and_do_login(self):
         self._driver.get(self._game_url)
+
         start_now_button = WebDriverWait(self._driver, 100).until(
             EC.presence_of_element_located((By.XPATH, "//*[text()='Start Now']")))
 
         start_now_button.click()
         WebDriverWait(self._driver, 100).until(
             EC.presence_of_element_located((By.XPATH, "//*[text()='Trilium Balance']")))
+        self._driver.save_screenshot('teste.png')
 
     def _is_claim_button_active(self):
         try:
-            self._driver.find_element_by_xpath("//*[text()='Claim Mine']")
+            self._driver.find_element(By.XPATH, "//*[text()='Claim Mine']")
         except NoSuchElementException as e:
             return False
 
@@ -75,7 +79,7 @@ class AlienWorldsBot:
     def _approve_button_click(self):
         approve_button = WebDriverWait(self._driver, 300).until(
             EC.presence_of_element_located((By.XPATH, "//*[text()='Approve']")))
-        sleep(1, 5)
+        sleep(randint(1, 5))
         approve_button.click()
 
     def _set_focus_to_main_window(self):
@@ -88,10 +92,10 @@ class AlienWorldsBot:
         while True:
             used_cpu_percentage = get_used_percentage_cpu()
 
-            while self._is_waiting_timeout() or used_cpu_percentage <= MAX_CPU_USAGE_PERCENTAGE:
+            while self._is_waiting_timeout() or used_cpu_percentage >= MAX_CPU_USAGE_PERCENTAGE:
                 print(f'USED CPU PERCENTAGE: {used_cpu_percentage}')
                 print(f'WAITING FOR 60s...')
-                sleep(settings.WAITING_TIMEOUT)
+                sleep(60)
                 used_cpu_percentage = get_used_percentage_cpu()
 
             if not self._is_claim_button_active():
@@ -101,6 +105,8 @@ class AlienWorldsBot:
             self._change_window_focus()
             self._approve_button_click()
             self._set_focus_to_main_window()
+
+            self._last_mine_attempt_timestamp = datetime.utcfromtimestamp(time())
 
 
 if __name__ == '__main__':

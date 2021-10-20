@@ -1,8 +1,4 @@
-from datetime import datetime
-from time import time
-
 import requests
-
 import settings
 
 
@@ -13,5 +9,6 @@ def get_used_percentage_cpu():
     max_cpu = cpu_limit.get('max')
 
     percentage_used = round((used_cpu * 100) / max_cpu)
+    print(percentage_used)
 
     return percentage_used
